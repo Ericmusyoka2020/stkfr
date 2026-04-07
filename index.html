@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -63,6 +62,32 @@
         <i class="fas fa-chart-line text-6xl text-emerald-200"></i>
       </div>
 
+      <!-- Business Info for Receipt -->
+      <div class="mt-8 bg-indigo-50 rounded-3xl shadow p-6 border-2 border-indigo-200">
+        <h3 class="text-xl font-bold mb-4 flex items-center gap-3 text-indigo-800">
+          <i class="fas fa-store"></i> Receipt Settings
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-indigo-700 mb-2">Business Name</label>
+            <input id="business-name" placeholder="Your Business Name" 
+                   class="w-full p-3 border-2 border-indigo-300 rounded-xl focus:border-indigo-500 focus:outline-none bg-white"
+                   onchange="saveBusinessInfo()">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-indigo-700 mb-2">Tagline / Comments</label>
+            <input id="business-tagline" placeholder="e.g. Thank you for shopping with us!" 
+                   class="w-full p-3 border-2 border-indigo-300 rounded-xl focus:border-indigo-500 focus:outline-none bg-white"
+                   onchange="saveBusinessInfo()">
+          </div>
+          <div class="flex items-end">
+            <button onclick="saveBusinessInfo()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition">
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Adjust Stock Quantity -->
       <div class="mt-8 bg-blue-50 rounded-3xl shadow p-8 border-2 border-blue-200">
         <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-blue-800">
@@ -92,8 +117,9 @@
       <div class="mt-8 bg-white rounded-3xl shadow p-6">
 
         <h3 class="font-semibold mb-4">Add New Stock Item</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
           <input id="new-name" placeholder="Item name" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
+          <input id="new-location" placeholder="Location (e.g. Shelf A1)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <input id="new-qty" type="number" value="10" placeholder="Initial Quantity" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <input id="new-price" type="number" step="0.01" placeholder="Unit Price (KSh)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <button onclick="addNewItem()" id="add-item-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold">Add Item</button>
@@ -120,6 +146,7 @@
                 <tr>
                   <th class="w-12 p-4"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
                   <th class="text-left p-4">Item Name</th>
+                  <th class="text-left p-4">Location</th>
                   <th class="text-right p-4">Quantity</th>
                   <th class="text-right p-4">Unit Price</th>
                   <th class="text-right p-4">Total Value</th>
@@ -291,6 +318,7 @@
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('user-email').textContent = currentUserEmail;
       loadInventory();
+      loadBusinessInfo();
     }
 
     // ==================== PROFILE & PASSWORD ====================
@@ -361,6 +389,9 @@
           row.innerHTML = `
             <td class="p-4"><input type="checkbox" class="item-checkbox w-5 h-5" data-id="${stock.id}" onchange="toggleCartItem(this)"></td>
             <td class="p-4 font-medium">${stock.item_name}</td>
+            <td class="p-4 text-left">
+              <span onclick="editField(this, '${stock.id}', 'location')" class="editable px-4 py-1 rounded-xl text-gray-600">${stock.location || '-'}</span>
+            </td>
             <td class="p-4 text-right">
               <span onclick="editField(this, '${stock.id}', 'quantity')" class="editable px-4 py-1 rounded-xl">${stock.quantity}</span>
             </td>
@@ -390,16 +421,25 @@
       const rows = document.querySelectorAll('#inventory-body tr');
       rows.forEach(row => {
         const name = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        row.style.display = name.includes(query) ? '' : 'none';
+        const location = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+        row.style.display = (name.includes(query) || location.includes(query)) ? '' : 'none';
       });
     }
 
     async function editField(element, id, field) {
-      const currentText = element.textContent.trim().replace(/[^\d.-]/g, '');
+      const currentText = element.textContent.trim();
       const input = document.createElement('input');
-      input.type = 'number';
-      input.step = field === 'unit_price' ? '0.01' : '1';
-      input.value = currentText;
+      
+      if (field === 'location') {
+        input.type = 'text';
+        input.value = currentText === '-' ? '' : currentText;
+        input.className = "w-full text-left bg-white border-2 border-indigo-500 rounded-xl p-2";
+      } else {
+        input.type = 'number';
+        input.step = field === 'unit_price' ? '0.01' : '1';
+        input.value = currentText.replace(/[^\d.-]/g, '');
+        input.className = "w-full text-right bg-white border-2 border-indigo-500 rounded-xl p-2";
+      }
       input.className = "w-full text-right bg-white border-2 border-indigo-500 rounded-xl p-2";
 
       element.replaceWith(input);
@@ -546,8 +586,7 @@
       btn.disabled = true;
 
       const totalAmount = cart.reduce((sum, item) => sum + (item.quantity_to_sell * item.unit_price), 0);
-      const businessName = currentUserEmail.split('@')[0];
-      downloadReceipt(totalAmount, businessName);
+      downloadReceipt(totalAmount);
 
       await Promise.all(cart.map(item => 
         apiFetch(`/api/inventory/${item.id}/sell`, {
@@ -563,16 +602,19 @@
       btn.disabled = false;
     }
 
-    function downloadReceipt(totalAmount, businessName) {
+    function downloadReceipt(totalAmount) {
       const cartSnapshot = [...cart];
       const uniqueCode = 'RCP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       const dateStr = new Date().toLocaleString();
+      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}');
+      const tagline = businessInfo.tagline || 'Thank you for your purchase!';
 
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
+      const displayName = businessInfo.businessName || currentUserEmail.split('@')[0] || 'Stock Manager';
       const receiptHTML = `
         <div style="padding: 20px; font-family: monospace; width: 300px; border: 2px solid #000; background: white;">
-          <h2 style="text-align: center; margin: 0 0 5px 0; font-size: 16px; font-weight: bold;">${businessName || 'Stock Manager'}</h2>
+          <h2 style="text-align: center; margin: 0 0 5px 0; font-size: 16px; font-weight: bold;">${displayName}</h2>
           <p style="text-align: center; margin: 0 0 5px 0; font-size: 12px;">${dateStr}</p>
           <p style="text-align: center; margin: 0 0 15px 0; font-size: 10px; color: #666;">Code: ${uniqueCode}</p>
           <hr style="border: 1px dashed #000;">
@@ -588,7 +630,7 @@
           <div style="text-align: right; font-size: 14px; font-weight: bold; padding: 10px 0;">
             TOTAL: KSh ${totalAmount.toFixed(2)}
           </div>
-          <p style="text-align: center; font-size: 10px; margin-top: 15px;">Thank you for your purchase!</p>
+          <p style="text-align: center; font-size: 10px; margin-top: 15px;">${tagline}</p>
         </div>
       `;
 
@@ -719,6 +761,7 @@
     async function addNewItem() {
       const btn = document.getElementById('add-item-btn');
       const name = document.getElementById('new-name').value.trim();
+      const location = document.getElementById('new-location').value.trim();
       const qty = parseInt(document.getElementById('new-qty').value) || 0;
       const price = parseFloat(document.getElementById('new-price').value) || 0;
 
@@ -730,9 +773,10 @@
       try {
         await apiFetch('/api/inventory', {
           method: 'POST',
-          body: JSON.stringify({ item_name: name, quantity: qty, unit_price: price })
+          body: JSON.stringify({ item_name: name, quantity: qty, unit_price: price, location: location || null })
         });
         document.getElementById('new-name').value = '';
+        document.getElementById('new-location').value = '';
         loadInventory();
       } catch (e) { alert(e); }
       finally {
@@ -747,6 +791,23 @@
         await apiFetch(`/api/inventory/${id}`, { method: 'DELETE' });
         loadInventory();
       } catch (e) { alert(e); }
+    }
+
+    function saveBusinessInfo() {
+      const businessName = document.getElementById('business-name').value.trim();
+      const tagline = document.getElementById('business-tagline').value.trim();
+      localStorage.setItem('businessInfo', JSON.stringify({ businessName, tagline }));
+      alert('Settings saved!');
+    }
+
+    function loadBusinessInfo() {
+      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}');
+      if (businessInfo.businessName) {
+        document.getElementById('business-name').value = businessInfo.businessName;
+      }
+      if (businessInfo.tagline) {
+        document.getElementById('business-tagline').value = businessInfo.tagline;
+      }
     }
 
     function logout() {
