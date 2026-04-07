@@ -62,12 +62,52 @@
         <i class="fas fa-chart-line text-6xl text-emerald-200"></i>
       </div>
 
+      <!-- Adjust Stock Quantity -->
+      <div class="mt-8 bg-blue-50 rounded-3xl shadow p-8 border-2 border-blue-200">
+        <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-blue-800">
+          <i class="fas fa-plus-circle"></i> Adjust Stock Amount
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-2">Select Item</label>
+            <select id="adjust-item" class="w-full p-4 border-2 border-blue-300 rounded-2xl focus:border-blue-500 focus:outline-none bg-white">
+              <option value="">Choose item to adjust...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-blue-700 mb-2">Amount to Add (+/-)</label>
+            <input id="adjust-amount" type="number" step="1" placeholder="e.g. 10 or -5" 
+                   class="w-full p-4 border-2 border-blue-300 rounded-2xl focus:border-blue-500 focus:outline-none bg-white">
+          </div>
+          <button onclick="adjustStockAmount()" 
+                  class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-2xl transition md:col-span-1">
+            Update Stock
+          </button>
+        </div>
+        <p class="text-xs text-blue-600 mt-3 italic">Positive = add stock, Negative = reduce stock</p>
+      </div>
+
+      <!-- Add New Item -->
+      <div class="mt-8 bg-white rounded-3xl shadow p-6">
+
+        <h3 class="font-semibold mb-4">Add New Stock Item</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input id="new-name" placeholder="Item name" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
+          <input id="new-qty" type="number" value="10" placeholder="Initial Quantity" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
+          <input id="new-price" type="number" step="0.01" placeholder="Unit Price (KSh)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
+          <button onclick="addNewItem()" id="add-item-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold">Add Item</button>
+        </div>
+      </div>
+
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         <!-- Inventory -->
         <div class="bg-white rounded-3xl shadow">
-          <div class="p-6 border-b">
+          <div class="p-6 border-b flex justify-between items-center">
             <h3 class="font-semibold text-xl">Inventory</h3>
+            <button onclick="quickAdjustStock()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-xl font-medium">
+              <i class="fas fa-edit"></i> Quick Update
+            </button>
           </div>
           <div class="p-4 border-b">
             <input type="text" id="inventory-search" oninput="searchInventory()" placeholder="Search items..."
@@ -141,17 +181,6 @@
         <p class="text-xs text-blue-600 mt-3 italic">Positive = add stock, Negative = reduce stock</p>
       </div>
 
-      <!-- Add New Item -->
-      <div class="mt-10 bg-white rounded-3xl shadow p-6">
-
-        <h3 class="font-semibold mb-4">Add New Stock Item</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <input id="new-name" placeholder="Item name" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
-          <input id="new-qty" type="number" value="10" placeholder="Initial Quantity" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
-          <input id="new-price" type="number" step="0.01" placeholder="Unit Price (KSh)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
-          <button onclick="addNewItem()" id="add-item-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold">Add Item</button>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -483,20 +512,101 @@
       if (cart.length === 0) return;
       if (!confirm('Confirm selling these items?')) return;
 
-      let success = 0;
-      for (const item of cart) {
-        try {
-          await apiFetch(`/api/inventory/${item.id}/sell`, {
-            method: 'POST',
-            body: JSON.stringify({ amount: item.quantity_to_sell })
-          });
-          success++;
-        } catch (e) { console.error(e); }
-      }
+      const btn = document.getElementById('confirm-sell-btn');
+      const originalText = btn.textContent;
+      btn.textContent = 'Processing...';
+      btn.disabled = true;
 
-      alert(`Sell completed! ${success} items updated successfully.`);
+      const totalAmount = cart.reduce((sum, item) => sum + (item.quantity_to_sell * item.unit_price), 0);
+      downloadReceipt(totalAmount);
+
+      await Promise.all(cart.map(item => 
+        apiFetch(`/api/inventory/${item.id}/sell`, {
+          method: 'POST',
+          body: JSON.stringify({ amount: item.quantity_to_sell })
+        }).catch(e => console.error(e))
+      ));
+
       cart = [];
+      renderCart();
       loadInventory();
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+
+    function downloadReceipt(totalAmount) {
+      const cartSnapshot = [...cart];
+      const uniqueCode = 'RCP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+      const dateStr = new Date().toLocaleString();
+      const receiptContent = `
+        <div style="padding: 20px; font-family: monospace; width: 300px; border: 2px solid #000; background: white;">
+          <h2 style="text-align: center; margin: 0 0 10px 0;">RECEIPT</h2>
+          <p style="text-align: center; margin: 0 0 5px 0; font-size: 12px;">${dateStr}</p>
+          <p style="text-align: center; margin: 0 0 15px 0; font-size: 10px; color: #666;">Code: ${uniqueCode}</p>
+          <hr style="border: 1px dashed #000;">
+          <table style="width: 100%; font-size: 12px;">
+            ${cartSnapshot.map(item => `
+              <tr>
+                <td style="padding: 3px 0;">${item.item_name} x${item.quantity_to_sell}</td>
+                <td style="text-align: right; padding: 3px 0;">KSh ${(item.quantity_to_sell * item.unit_price).toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </table>
+          <hr style="border: 1px dashed #000;">
+          <div style="text-align: right; font-size: 14px; font-weight: bold; padding: 10px 0;">
+            TOTAL: KSh ${totalAmount.toFixed(2)}
+          </div>
+          <p style="text-align: center; font-size: 10px; margin-top: 15px;">Thank you for your purchase!</p>
+        </div>
+      `;
+
+      const container = document.createElement('div');
+      container.innerHTML = receiptContent;
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      document.body.appendChild(container);
+
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head><title>${uniqueCode}</title></head>
+          <body style="margin:0;padding:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#f0f0f0;">
+            ${container.innerHTML}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.onafterprint = () => printWindow.close();
+        document.body.removeChild(container);
+      }, 250);
+    }
+
+    function quickAdjustStock() {
+      const id = prompt('Enter item ID to update:');
+      if (!id) return;
+      
+      const stock = currentStocks.find(s => s.id === id);
+      if (!stock) return alert('Item not found');
+
+      const newQty = prompt(`Current quantity: ${stock.quantity}\nEnter new quantity:`, stock.quantity);
+      if (newQty === null || newQty === '') return;
+      
+      const qty = parseInt(newQty);
+      if (isNaN(qty) || qty < 0) return alert('Invalid quantity');
+
+      if (!confirm(`Update "${stock.item_name}" quantity to ${qty}?`)) return;
+
+      apiFetch(`/api/inventory/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ quantity: qty })
+      }).then(() => {
+        alert('Stock updated!');
+        loadInventory();
+      }).catch(e => alert('Update failed: ' + e));
     }
 
     function populateAdjustDropdown() {
