@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -286,7 +287,7 @@
       }
     }
 
-    function showDashboard() {
+function showDashboard() {
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('user-email').textContent = currentUserEmail;
@@ -763,13 +764,17 @@
     }
 
     // Auto login
-    window.onload = () => {
+    window.onload = async () => {
       const savedToken = localStorage.getItem('token');
       if (savedToken) {
-        currentToken = savedToken;
-        // For simplicity we use last entered email. You can improve this later.
-        currentUserEmail = document.getElementById('email').value || "user@example.com";
-        showDashboard();
+        try {
+          currentToken = savedToken;
+          const data = await apiFetch('/api/auth/me');
+          currentUserEmail = data.email;
+          showDashboard();
+        } catch (e) {
+          localStorage.removeItem('token');
+        }
       }
     };
   </script>
