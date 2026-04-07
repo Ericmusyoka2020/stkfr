@@ -93,7 +93,7 @@
 
         <h3 class="font-semibold mb-4">Add New Stock Item</h3>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <input id="new-name" placeholder="Item name" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
+          <input id="new-name" placeholder="Item name * location eg oil ,(t1)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <input id="new-qty" type="number" value="10" placeholder="Initial Quantity" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <input id="new-price" type="number" step="0.01" placeholder="Unit Price (KSh)" class="p-4 border rounded-2xl focus:outline-none focus:border-indigo-500">
           <button onclick="addNewItem()" id="add-item-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold">Add Item</button>
@@ -119,7 +119,7 @@
               <thead class="sticky top-0 bg-gray-100">
                 <tr>
                   <th class="w-12 p-4"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
-                  <th class="text-left p-4">Item Name/location/</th>
+                  <th class="text-left p-4">Item Name * location</th>
                   <th class="text-right p-4">Quantity</th>
                   <th class="text-right p-4">Unit Price</th>
                   <th class="text-right p-4">Total Value</th>
@@ -546,7 +546,8 @@
       btn.disabled = true;
 
       const totalAmount = cart.reduce((sum, item) => sum + (item.quantity_to_sell * item.unit_price), 0);
-      downloadReceipt(totalAmount);
+      const businessName = currentUserEmail.split('@')[0];
+      downloadReceipt(totalAmount, businessName);
 
       await Promise.all(cart.map(item => 
         apiFetch(`/api/inventory/${item.id}/sell`, {
@@ -562,13 +563,16 @@
       btn.disabled = false;
     }
 
-    function downloadReceipt(totalAmount) {
+    function downloadReceipt(totalAmount, businessName) {
       const cartSnapshot = [...cart];
       const uniqueCode = 'RCP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       const dateStr = new Date().toLocaleString();
-      const receiptContent = `
+
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      const receiptHTML = `
         <div style="padding: 20px; font-family: monospace; width: 300px; border: 2px solid #000; background: white;">
-          <h2 style="text-align: center; margin: 0 0 10px 0;">RECEIPT</h2>
+          <h2 style="text-align: center; margin: 0 0 5px 0; font-size: 16px; font-weight: bold;">${businessName || 'Stock Manager'}</h2>
           <p style="text-align: center; margin: 0 0 5px 0; font-size: 12px;">${dateStr}</p>
           <p style="text-align: center; margin: 0 0 15px 0; font-size: 10px; color: #666;">Code: ${uniqueCode}</p>
           <hr style="border: 1px dashed #000;">
@@ -588,8 +592,38 @@
         </div>
       `;
 
+      if (isMobile) {
+        const receiptDiv = document.createElement('div');
+        receiptDiv.innerHTML = receiptHTML;
+        receiptDiv.style.position = 'fixed';
+        receiptDiv.style.left = '-9999px';
+        receiptDiv.style.top = '0';
+        receiptDiv.style.background = 'white';
+        document.body.appendChild(receiptDiv);
+
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        script.onload = () => {
+          html2canvas(receiptDiv, { scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = `${uniqueCode}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            document.body.removeChild(receiptDiv);
+          });
+        };
+        script.onerror = () => {
+          document.body.removeChild(receiptDiv);
+          const printWindow = window.open('', '_blank');
+          printWindow.document.write(`<html><head><title>${uniqueCode}</title></head><body>${receiptHTML}</body></html>`);
+          printWindow.document.close();
+        };
+        document.head.appendChild(script);
+        return;
+      }
+
       const container = document.createElement('div');
-      container.innerHTML = receiptContent;
+      container.innerHTML = receiptHTML;
       container.style.position = 'fixed';
       container.style.left = '-9999px';
       container.style.top = '0';
