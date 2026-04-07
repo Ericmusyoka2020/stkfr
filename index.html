@@ -249,11 +249,11 @@
     }
 
     async function handleAuth() {
-      const email = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       const isLogin = document.getElementById('form-title').textContent === 'Login';
 
-      if (!email || !password) return alert("name and password are required");
+      if (!email || !password) return alert("Email and password are required");
 
       const btn = document.getElementById('auth-btn');
       const originalText = btn.textContent;
@@ -546,7 +546,8 @@
       btn.disabled = true;
 
       const totalAmount = cart.reduce((sum, item) => sum + (item.quantity_to_sell * item.unit_price), 0);
-      downloadReceipt(totalAmount, currentUserEmail);
+      const businessName = currentUserEmail.split('@')[0];
+      downloadReceipt(totalAmount, businessName);
 
       await Promise.all(cart.map(item => 
         apiFetch(`/api/inventory/${item.id}/sell`, {
@@ -767,7 +768,7 @@
       if (savedToken) {
         currentToken = savedToken;
         // For simplicity we use last entered email. You can improve this later.
-        currentUserEmail = document.getElementById('email').value || "system";
+        currentUserEmail = document.getElementById('email').value || "user@example.com";
         showDashboard();
       }
     };
