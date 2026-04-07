@@ -63,12 +63,6 @@
         <i class="fas fa-chart-line text-6xl text-emerald-200"></i>
       </div>
 
-      <!-- Business Info for Receipt -->
-     
-        
-        </div>
-      </div>
-
       <!-- Adjust Stock Quantity -->
       <div class="mt-8 bg-blue-50 rounded-3xl shadow p-8 border-2 border-blue-200">
         <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-blue-800">
@@ -125,7 +119,7 @@
               <thead class="sticky top-0 bg-gray-100">
                 <tr>
                   <th class="w-12 p-4"><input type="checkbox" id="select-all" onclick="toggleSelectAll()"></th>
-                  <th class="text-left p-4">Item Name/location</th>
+                  <th class="text-left p-4">Item Name</th>
                   <th class="text-right p-4">Quantity</th>
                   <th class="text-right p-4">Unit Price</th>
                   <th class="text-right p-4">Total Value</th>
@@ -297,7 +291,6 @@
       document.getElementById('dashboard').classList.remove('hidden');
       document.getElementById('user-email').textContent = currentUserEmail;
       loadInventory();
-      loadBusinessInfo();
     }
 
     // ==================== PROFILE & PASSWORD ====================
@@ -402,11 +395,11 @@
     }
 
     async function editField(element, id, field) {
-      const currentText = element.textContent.trim();
+      const currentText = element.textContent.trim().replace(/[^\d.-]/g, '');
       const input = document.createElement('input');
       input.type = 'number';
       input.step = field === 'unit_price' ? '0.01' : '1';
-      input.value = currentText.replace(/[^\d.-]/g, '');
+      input.value = currentText;
       input.className = "w-full text-right bg-white border-2 border-indigo-500 rounded-xl p-2";
 
       element.replaceWith(input);
@@ -414,8 +407,8 @@
       input.select();
 
       const save = async () => {
-        const newValue = parseFloat(input.value);
-        if (isNaN(newValue) || newValue < 0) return loadInventory();
+        let newValue = parseFloat(input.value);
+        if (isNaN(newValue) || newValue < 0) newValue = parseFloat(currentText);
 
         try {
           await apiFetch(`/api/inventory/${id}`, {
@@ -573,15 +566,9 @@
       const cartSnapshot = [...cart];
       const uniqueCode = 'RCP-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6).toUpperCase();
       const dateStr = new Date().toLocaleString();
-      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}');
-      const tagline = businessInfo.tagline || 'Thank you for your purchase!';
-
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-
-      const displayName = businessInfo.businessName || currentUserEmail.split('@')[0] || 'Stock Manager';
-      const receiptHTML = `
+      const receiptContent = `
         <div style="padding: 20px; font-family: monospace; width: 300px; border: 2px solid #000; background: white;">
-          <h2 style="text-align: center; margin: 0 0 5px 0; font-size: 16px; font-weight: bold;">${displayName}</h2>
+          <h2 style="text-align: center; margin: 0 0 10px 0;">RECEIPT</h2>
           <p style="text-align: center; margin: 0 0 5px 0; font-size: 12px;">${dateStr}</p>
           <p style="text-align: center; margin: 0 0 15px 0; font-size: 10px; color: #666;">Code: ${uniqueCode}</p>
           <hr style="border: 1px dashed #000;">
@@ -597,42 +584,12 @@
           <div style="text-align: right; font-size: 14px; font-weight: bold; padding: 10px 0;">
             TOTAL: KSh ${totalAmount.toFixed(2)}
           </div>
-          <p style="text-align: center; font-size: 10px; margin-top: 15px;">${tagline}</p>
+          <p style="text-align: center; font-size: 10px; margin-top: 15px;">Thank you for your purchase!</p>
         </div>
       `;
 
-      if (isMobile) {
-        const receiptDiv = document.createElement('div');
-        receiptDiv.innerHTML = receiptHTML;
-        receiptDiv.style.position = 'fixed';
-        receiptDiv.style.left = '-9999px';
-        receiptDiv.style.top = '0';
-        receiptDiv.style.background = 'white';
-        document.body.appendChild(receiptDiv);
-
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        script.onload = () => {
-          html2canvas(receiptDiv, { scale: 2 }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = `${uniqueCode}.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-            document.body.removeChild(receiptDiv);
-          });
-        };
-        script.onerror = () => {
-          document.body.removeChild(receiptDiv);
-          const printWindow = window.open('', '_blank');
-          printWindow.document.write(`<html><head><title>${uniqueCode}</title></head><body>${receiptHTML}</body></html>`);
-          printWindow.document.close();
-        };
-        document.head.appendChild(script);
-        return;
-      }
-
       const container = document.createElement('div');
-      container.innerHTML = receiptHTML;
+      container.innerHTML = receiptContent;
       container.style.position = 'fixed';
       container.style.left = '-9999px';
       container.style.top = '0';
@@ -756,23 +713,6 @@
         await apiFetch(`/api/inventory/${id}`, { method: 'DELETE' });
         loadInventory();
       } catch (e) { alert(e); }
-    }
-
-    function saveBusinessInfo() {
-      const businessName = document.getElementById('business-name').value.trim();
-      const tagline = document.getElementById('business-tagline').value.trim();
-      localStorage.setItem('businessInfo', JSON.stringify({ businessName, tagline }));
-      alert('Settings saved!');
-    }
-
-    function loadBusinessInfo() {
-      const businessInfo = JSON.parse(localStorage.getItem('businessInfo') || '{}');
-      if (businessInfo.businessName) {
-        document.getElementById('business-name').value = businessInfo.businessName;
-      }
-      if (businessInfo.tagline) {
-        document.getElementById('business-tagline').value = businessInfo.tagline;
-      }
     }
 
     function logout() {
