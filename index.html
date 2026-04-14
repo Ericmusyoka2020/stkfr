@@ -19,7 +19,7 @@
 <body class="bg-gray-50 min-h-screen">
   <div class="max-w-7xl mx-auto p-6">
 
-    <!-- AUTH SCREEN -->
+    
     <div id="auth-screen" class="max-w-md mx-auto mt-20 bg-white rounded-2xl shadow-xl p-8">
       <h1 class="text-3xl font-bold text-center mb-8 text-indigo-600">Stock Manager</h1>
       <h2 id="form-title" class="text-2xl font-semibold text-center mb-6">Login</h2>
@@ -36,7 +36,7 @@
       </p>
     </div>
 
-    <!-- DASHBOARD -->
+    
     <div id="dashboard" class="hidden">
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-4xl font-bold text-gray-800">Stock Manager</h1>
@@ -55,7 +55,7 @@
         </div>
       </div>
 
-      <!-- Total Portfolio Value -->
+      
       <div class="bg-white rounded-3xl shadow p-6 mb-8 flex items-center justify-between">
         <div>
           <p class="text-sm text-gray-500">TOTAL PORTFOLIO VALUE</p>
@@ -64,7 +64,7 @@
         <i class="fas fa-chart-line text-6xl text-emerald-200"></i>
       </div>
 
-      <!-- Adjust Stock Quantity -->
+      
       <div class="mt-8 bg-blue-50 rounded-3xl shadow p-8 border-2 border-blue-200">
         <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-blue-800">
           <i class="fas fa-plus-circle"></i> Adjust Stock Amount
@@ -89,7 +89,7 @@
         <p class="text-xs text-blue-600 mt-3 italic">Positive = add stock, Negative = reduce stock</p>
       </div>
 
-      <!-- Add New Item -->
+      
       <div class="mt-8 bg-white rounded-3xl shadow p-6">
 
         <h3 class="font-semibold mb-4">Add New Stock Item</h3>
@@ -103,7 +103,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
-        <!-- Inventory -->
+        
         <div class="bg-white rounded-3xl shadow">
           <div class="p-6 border-b flex justify-between items-center">
             <h3 class="font-semibold text-xl">Inventory</h3>
@@ -132,7 +132,7 @@
           </div>
         </div>
 
-        <!-- Sell Cart -->
+        
         <div class="bg-white rounded-3xl shadow">
           <div class="p-6 border-b bg-amber-50 rounded-t-3xl flex justify-between items-center">
             <h3 class="font-semibold text-xl flex items-center gap-2">
@@ -142,7 +142,7 @@
           </div>
 
           <div id="cart-items" class="p-6 max-h-[480px] overflow-auto space-y-4 min-h-[200px]">
-            <!-- Cart items populated by JavaScript -->
+            
           </div>
 
           <div class="p-6 border-t bg-gray-50 rounded-b-3xl">
@@ -158,7 +158,7 @@
         </div>
       </div>
 
-      <!-- Adjust Stock Quantity -->
+      
       <div class="mt-8 bg-blue-50 rounded-3xl shadow p-8 border-2 border-blue-200">
         <h3 class="text-xl font-bold mb-6 flex items-center gap-3 text-blue-800">
           <i class="fas fa-plus-circle"></i> Adjust Stock Amount
@@ -187,7 +187,7 @@
   </div>
 
   <script>
-    const API = 'https://stk-fjdw.onrender.com';   // Change this when you deploy
+    const API = 'https://stk-fjdw.onrender.com';   
     let currentToken = null;
     let cart = [];
     let currentStocks = [];
@@ -206,7 +206,7 @@
       return data;
     }
 
-    // ==================== AUTH ====================
+    
     function toggleAuthMode() {
       const title = document.getElementById('form-title');
       const btn = document.getElementById('auth-btn');
@@ -267,7 +267,7 @@ function showDashboard() {
       loadInventory();
     }
 
-    // ==================== INVENTORY ====================
+    
     async function loadInventory() {
       try {
         currentStocks = await apiFetch('/api/inventory');
@@ -353,7 +353,7 @@ function showDashboard() {
       input.addEventListener('keypress', e => { if (e.key === 'Enter') input.blur(); });
     }
 
-    // ==================== SELL CART ====================
+    
     function toggleCartItem(checkbox) {
       const id = checkbox.dataset.id;
       const stock = currentStocks.find(s => s.id === id);
@@ -622,7 +622,7 @@ function showDashboard() {
       if (!confirm(`Update ${amount > 0 ? 'add' : 'remove'} ${Math.abs(amount)} units to the selected item?`)) return;
       
       try {
-        // Get current stock to calculate new quantity
+        
         const currentStock = currentStocks.find(s => s.id == id);
         const newQuantity = currentStock.quantity + amount;
         
@@ -642,7 +642,7 @@ function showDashboard() {
       }
     }
 
-    // ==================== OTHER FUNCTIONS ====================
+    
     async function addNewItem() {
       const btn = document.getElementById('add-item-btn');
       const name = document.getElementById('new-name').value.trim();
@@ -689,7 +689,7 @@ function showDashboard() {
       });
     }
 
-    // Auto login
+    
     window.onload = async () => {
       const savedToken = localStorage.getItem('token');
       if (savedToken) {
